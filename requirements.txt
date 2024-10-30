@@ -1,9 +1,6 @@
 flwr
 flwr_datasets[vision]
 numpy
-torch
-torchvision
-torchaudio
 scipy
 scikit-learn
 tensorboard

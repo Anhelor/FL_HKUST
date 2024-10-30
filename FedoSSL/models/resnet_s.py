@@ -228,7 +228,7 @@ class ResNet(nn.Module):
             # Match predicted assignments with SK assignments
             cos_loss = F.cosine_similarity(SK_assigns, probs1, dim=-1).mean()
             loss = - cos_loss #+ angular_loss
-            print("F.cosine_similarity: ", cos_loss)
+            # print("F.cosine_similarity: ", cos_loss)
             # Train
             loss.backward()
             optimizer.step()

@@ -67,8 +67,8 @@ class FedCustom(FedAvg):
         self.name_filters = ["mem_projections", "local_centroids", "local_labeled_centroids"]
 
         self.num_classes = 10
-        self.temp_model  = models.resnet18(num_classes=10)
-        self.global_model = models.resnet18(num_classes=self.num_classes)
+        self.temp_model  = models.resnet18(num_classes=10).to(device)
+        self.global_model = models.resnet18(num_classes=self.num_classes).to(device)
 
     def __repr__(self) -> str:
         return "FedCustom"
@@ -90,7 +90,7 @@ class FedCustom(FedAvg):
                 param.requires_grad = False
             if "centroids" in name:
                 param.requires_grad = True
-        
+
         ndarrays = get_parameters(self.global_model)
         return ndarrays_to_parameters(ndarrays)
 
@@ -146,18 +146,18 @@ class FedCustom(FedAvg):
         uploaded_weights = []
         uploaded_models = []
         clients_model = []
-        
+
         for i in range(len(results)):
             for j, (_, val) in enumerate(self.temp_model.state_dict().items()):
-                val.copy_(results[i][1].parameters[j])
+                val.copy_(torch.tensor(weights_results[i][0][j]))
 
             temp_model = copy.deepcopy(self.temp_model)
             uploaded_models.append(temp_model.parameters())
             clients_model.append(temp_model)
 
         for _,fit_res in results:
-            uploaded_weights.append(1.0/len(results)) 
-        
+            uploaded_weights.append(1.0/len(results))
+
         for name, param in self.global_model.named_parameters():
             if "centroids" not in name:
                 param.data = torch.zeros_like(param.data)
@@ -180,8 +180,8 @@ class FedCustom(FedAvg):
         self.global_model.global_clustering(Z1.to(device).T) # update self.centroids in global model
         # set labeled data feature instead of self.centroids
         self.global_model.set_labeled_feature_centroids(device=device)
-        
-        parameters_aggregated = self.global_model.parameters()
+
+        parameters_aggregated = ndarrays_to_parameters([val.cpu().numpy() for _, val in self.global_model.state_dict().items()])
         metrics_aggregated = {}
 
         return parameters_aggregated, metrics_aggregated

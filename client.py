@@ -38,7 +38,7 @@ args = parser.parse_args()
 
 # Create an instance of the model and pass the learning rate as an argument
 
-device = device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class Client(fl.client.NumPyClient):
     def __init__(self, args):
@@ -49,12 +49,12 @@ class Client(fl.client.NumPyClient):
 
         logger.info("Preparing data...")
 
-        self.net = models.resnet18(num_classes=10)
+        self.net = models.resnet18(num_classes=10).to(device)
 
         self.name_filters = ["mem_projections", "local_centroids", "local_labeled_centroids"]
 
         self.filtered_params = {}
-        
+
         client_train_label_loader,client_train_unlabel_loader,client_test_loader = load_datasets()
 
         self.client_train_label_loader = client_train_label_loader[self.client_id]
@@ -67,13 +67,13 @@ class Client(fl.client.NumPyClient):
             # 如果参数名称包含在 name_filters 中，则提取该参数
             if any(filter_name in name for filter_name in self.name_filters):
                 self.filtered_params[name] = param
-    
+
     def update_filtered_parameters(self):
         # 将 new_params 中的参数覆盖到模型的对应层
         for name, param in self.net.named_parameters():
             if name in self.filtered_params:
                 param.data = self.filtered_params[name].data.clone()
-    
+
     def get_parameters(self, config):
         # Return the parameters of the model
         return get_parameters(self.net)
@@ -88,7 +88,7 @@ class Client(fl.client.NumPyClient):
         self.update_filtered_parameters()
         # Train the model
         for epoch in range(epochs):
-            mean_uncert,_ = utils.test(args, self.net, labeled_num, device, self.client_test_loader)
+            mean_uncert,_ = utils.test(args, self.net, labeled_num, device, self.client_test_loader, epoch, self.client_id)
             utils.train(args, self.net, device, self.client_train_label_loader, self.client_train_unlabel_loader, mean_uncert,global_round)
         # local_clustering #
         self.net.local_clustering(device=device)
@@ -100,10 +100,9 @@ class Client(fl.client.NumPyClient):
     def evaluate(self, parameters, config):
         # Set the weights of the model
         set_parameters(self.net,parameters)
-        epochs = 5
-        labeled_num = 50
+        labeled_num = 5
         # Evaluate the model and get the loss and accuracy
-        loss, accuracy = utils.test(args, self.net, labeled_num, device, self.client_test_loader)
+        loss, accuracy = utils.test(args, self.net, labeled_num, device, self.client_test_loader, 0, self.client_id, is_print=False)
 
         # Return the loss, the number of examples evaluated on and the accuracy
         return float(loss), len(self.client_test_loader), {"accuracy": float(accuracy)}

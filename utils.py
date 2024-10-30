@@ -143,7 +143,7 @@ def train(args, model, device, train_label_loader, train_unlabel_loader, m, glob
 
         pos_pairs = []
         target_np = target.cpu().numpy()
-        
+
         # label part
         for i in range(labeled_len):
             target_i = target_np[i]
@@ -192,7 +192,7 @@ def train(args, model, device, train_label_loader, train_unlabel_loader, m, glob
         np_unlabel_targets = np.append(np_unlabel_targets, unlabel_target.cpu().numpy())
         #
         entropy_loss = entropy(torch.mean(prob, 0))
-        
+
         #loss = - entropy_loss + ce_loss + bce_loss
         # loss = ce_loss
         if global_round > 4: #4
@@ -222,7 +222,7 @@ def train(args, model, device, train_label_loader, train_unlabel_loader, m, glob
         #print("unlabel cluster_pred: ", cluster_pred[labeled_len:])
     scheduler.step()
 
-def test(args, model, labeled_num, device, test_loader):
+def test(args, model, labeled_num, device, test_loader, epoch, client_id, is_print=True):
     model.eval()
     preds = np.array([])
     cluster_preds = np.array([]) # cluster_preds
@@ -280,7 +280,7 @@ def test(args, model, labeled_num, device, test_loader):
     ##
     # overall_acc = cluster_acc(preds, targets)
     overall_acc, w_overall_acc = cluster_acc_w(origin_preds, targets)
-    
+
     # cluster_acc
     overall_cluster_acc = cluster_acc(cluster_preds, targets)
     #
@@ -290,6 +290,8 @@ def test(args, model, labeled_num, device, test_loader):
     unseen_acc, w_unseen_acc = cluster_acc_w(preds[unseen_mask], targets[unseen_mask])
 
     unseen_nmi = metrics.normalized_mutual_info_score(targets[unseen_mask], preds[unseen_mask])
+    if is_print:
+        print('epoch {}, Client id {}, Test overall acc {:.4f}, Test overall cluster acc {:.4f}, seen acc {:.4f}, unseen acc {:.4f}, local_unseen acc {:.4f}, global_unseen acc {:.4f}'.format(epoch, client_id, overall_acc, overall_cluster_acc, seen_acc, unseen_acc, local_unseen_acc_6, global_unseen_acc))
     mean_uncert = 1 - np.mean(confs)
 
     return mean_uncert,overall_cluster_acc
